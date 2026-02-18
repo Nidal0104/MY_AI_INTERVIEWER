@@ -1,111 +1,100 @@
 import streamlit as st
 from database import create_tables
 from auth import register_user, login_user
-from interview_engine import generate_question
-from evaluation_engine import evaluate_answer
-from analytics import generate_radar_chart
-from voice_utils import speech_to_text, text_to_speech
-import time
 
 create_tables()
 
-st.set_page_config(page_title="AI Interview Simulator", layout="wide")
+st.set_page_config(page_title="AI Voice Interview Simulator", layout="wide")
 
-JOB_ROLES = [
-    "Teacher", "Lawyer", "Corporate Software Engineer",
-    "Database Engineer", "Civil Servant",
-    "Data Scientist", "AI Engineer",
-    "Business Analyst", "Digital Marketer"
-]
+# Country → Top Cities
+COUNTRIES_CITIES = {
+    "Pakistan": ["Karachi","Lahore","Islamabad","Rawalpindi","Faisalabad","Multan","Peshawar","Quetta","Sialkot","Gujranwala","Bahawalpur","Hyderabad","Sukkur","Abbottabad","Mardan"],
+    "India": ["Mumbai","Delhi","Bangalore","Hyderabad","Ahmedabad","Chennai","Kolkata","Pune","Jaipur","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal"],
+    "Saudi Arabia": ["Riyadh","Jeddah","Mecca","Medina","Dammam","Khobar","Tabuk","Abha","Hail","Jazan","Al Kharj","Al Qatif","Taif","Najran","Yanbu"],
+    "England": ["London","Manchester","Birmingham","Leeds","Glasgow","Sheffield","Liverpool","Bristol","Newcastle","Leicester","Coventry","Nottingham","Hull","Bradford","Cardiff"]
+}
+
+# Degrees → Disciplines
+DEGREES_DISCIPLINES = {
+    "Matric": ["Science","Arts","Commerce"],
+    "Inter": ["Pre-Medical","Pre-Engineering","Commerce","Arts"],
+    "Bachelors": ["Computer Science","Electrical Engineering","Mechanical Engineering","Business Administration","Economics","Physics","Mathematics","Biology","Law","Political Science","Marketing","Finance","Psychology","English","Chemistry"],
+    "Masters": ["Computer Science","Electrical Engineering","Business Administration","Economics","Physics","Mathematics","Biology","Law","Political Science","Marketing","Finance","Psychology","English","Chemistry"],
+    "MPhil": ["Computer Science","Economics","Physics","Mathematics","Biology","Law","Political Science","Business Administration","Psychology","English","Chemistry"],
+    "PhD": ["Computer Science","Economics","Physics","Mathematics","Biology","Law","Political Science","Business Administration","Psychology","English","Chemistry"]
+}
+
+AGES = list(range(15,66))
+
+JOB_ROLES = ["Teacher","Lawyer","Corporate Software Engineer","Database Engineer","Civil Servant","Data Scientist","AI Engineer","Business Analyst","Digital Marketer"]
 
 if "user" not in st.session_state:
     st.session_state.user = None
 
 st.title("🎯 AI Voice Interview Simulator")
 
-# AUTH SECTION
+# ------------------------- AUTH -------------------------
 if not st.session_state.user:
     option = st.sidebar.selectbox("Select", ["Login", "Register"])
 
     if option == "Register":
         with st.form("register"):
-            first_name = st.text_input("First Name")
-            last_name = st.text_input("Last Name")
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            phone = st.text_input("Phone")
-            age = st.number_input("Age")
-            address = st.text_input("Address")
-            degree = st.text_input("Last Degree")
-            certifications = st.text_area("Certifications")
+            st.subheader("Create a new account")
+
+            first_name = st.text_input("First Name *")
+            last_name = st.text_input("Last Name *")
+            email = st.text_input("Email *")
+            password = st.text_input("Password *", type="password")
+            phone = st.text_input("Cell Number *")
+            age = st.selectbox("Age *", AGES)
+            country = st.selectbox("Country *", list(COUNTRIES_CITIES.keys()))
+            city = st.selectbox("City *", COUNTRIES_CITIES[country])
+            degree = st.selectbox("Last Completed Degree *", list(DEGREES_DISCIPLINES.keys()))
+            discipline = st.selectbox("Program / Discipline *", DEGREES_DISCIPLINES[degree])
+            certifications = st.text_area("Certifications (if any)")
 
             submitted = st.form_submit_button("Register")
 
+            mandatory_fields = [first_name, last_name, email, password, phone, age, country, city, degree, discipline]
             if submitted:
-                success = register_user({
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "email": email,
-                    "password": password,
-                    "phone": phone,
-                    "age": age,
-                    "address": address,
-                    "degree": degree,
-                    "certifications": certifications
-                })
-                if success:
-                    st.success("Account created. Please login.")
+                if "" in map(str, mandatory_fields):
+                    st.error("Please fill in all mandatory fields before registering.")
                 else:
-                    st.error("User already exists.")
+                    success = register_user({
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": email,
+                        "password": password,
+                        "phone": phone,
+                        "age": age,
+                        "country": country,
+                        "city": city,
+                        "degree": degree,
+                        "discipline": discipline,
+                        "certifications": certifications
+                    })
+                    if success:
+                        st.success("Account created successfully! You can now login.")
+                    else:
+                        st.error("A user with this email already exists.")
 
     if option == "Login":
+        st.subheader("Login to your account")
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
         if st.button("Login"):
-            user = login_user(email, password)
-            if user:
-                st.session_state.user = user
-                st.success("Logged in successfully.")
-                st.rerun()
+            if email.strip() == "" or password.strip() == "":
+                st.error("Please enter both email and password.")
             else:
-                st.error("Invalid credentials")
+                user = login_user(email, password)
+                if user:
+                    st.session_state.user = user
+                    st.success("Logged in successfully.")
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid credentials.")
 
 else:
     st.sidebar.success(f"Welcome {st.session_state.user['first_name']}")
     job_role = st.sidebar.selectbox("Select Job Role", JOB_ROLES)
-
-    if st.button("Start Interview"):
-        st.session_state.interview_active = True
-        st.session_state.question_count = 0
-        st.session_state.total_score = 0
-
-    if st.session_state.get("interview_active"):
-
-        difficulty = "medium"
-        question = generate_question(job_role, st.session_state.user, difficulty)
-
-        st.subheader("Interview Question")
-        st.write(question)
-
-        answer = st.text_area("Your Answer")
-
-        if st.button("Submit Answer"):
-            evaluation = evaluate_answer(question, answer, job_role)
-
-            st.write("### AI Feedback")
-            st.write(evaluation["overall_feedback"])
-
-            st.write("### Improved Answer")
-            st.write(evaluation["improved_answer"])
-
-            st.session_state.total_score += evaluation["score"]
-
-            fig = generate_radar_chart(evaluation)
-            st.plotly_chart(fig)
-
-            if evaluation["hire_recommendation"] == "pass":
-                st.success("🎉 Interview Passed")
-            else:
-                st.error("❌ Interview Failed")
-
-            st.session_state.interview_active = False
+    st.write(f"You are logged in. Selected job role: {job_role}")
