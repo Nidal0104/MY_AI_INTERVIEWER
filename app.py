@@ -24,19 +24,31 @@ DEGREES_DISCIPLINES = {
     "PhD": ["Computer Science","Economics","Physics","Mathematics","Biology","Law","Political Science","Business Administration","Psychology","English","Chemistry"]
 }
 
-AGES = list(range(15,66))
+AGES = list(range(15, 66))
 
-JOB_ROLES = ["Teacher","Lawyer","Corporate Software Engineer","Database Engineer","Civil Servant","Data Scientist","AI Engineer","Business Analyst","Digital Marketer"]
+JOB_ROLES = [
+    "Teacher",
+    "Lawyer",
+    "Corporate Software Engineer",
+    "Database Engineer",
+    "Civil Servant",
+    "Data Scientist",
+    "AI Engineer",
+    "Business Analyst",
+    "Digital Marketer"
+]
 
+# ---------------- SESSION INIT ----------------
 if "user" not in st.session_state:
     st.session_state.user = None
 
 st.title("🎯 AI Voice Interview Simulator")
 
-# ------------------------- AUTH -------------------------
+# ---------------- AUTH SECTION ----------------
 if not st.session_state.user:
     option = st.sidebar.selectbox("Select", ["Login", "Register"])
 
+    # ---------------- REGISTER ----------------
     if option == "Register":
         with st.form("register"):
             st.subheader("Create a new account")
@@ -55,7 +67,11 @@ if not st.session_state.user:
 
             submitted = st.form_submit_button("Register")
 
-            mandatory_fields = [first_name, last_name, email, password, phone, age, country, city, degree, discipline]
+            mandatory_fields = [
+                first_name, last_name, email, password,
+                phone, age, country, city, degree, discipline
+            ]
+
             if submitted:
                 if "" in map(str, mandatory_fields):
                     st.error("Please fill in all mandatory fields before registering.")
@@ -73,15 +89,19 @@ if not st.session_state.user:
                         "discipline": discipline,
                         "certifications": certifications
                     })
+
                     if success:
                         st.success("Account created successfully! You can now login.")
                     else:
                         st.error("A user with this email already exists.")
 
+    # ---------------- LOGIN ----------------
     if option == "Login":
         st.subheader("Login to your account")
+
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
+
         if st.button("Login"):
             if email.strip() == "" or password.strip() == "":
                 st.error("Please enter both email and password.")
@@ -90,11 +110,19 @@ if not st.session_state.user:
                 if user:
                     st.session_state.user = user
                     st.success("Logged in successfully.")
-                    st.experimental_rerun()
+                    st.rerun()   # ✅ FIXED HERE
                 else:
                     st.error("Invalid credentials.")
 
+# ---------------- DASHBOARD ----------------
 else:
     st.sidebar.success(f"Welcome {st.session_state.user['first_name']}")
+
+    if st.sidebar.button("Logout"):
+        st.session_state.user = None
+        st.rerun()
+
     job_role = st.sidebar.selectbox("Select Job Role", JOB_ROLES)
-    st.write(f"You are logged in. Selected job role: {job_role}")
+
+    st.write("You are logged in.")
+    st.write(f"Selected job role: {job_role}")
