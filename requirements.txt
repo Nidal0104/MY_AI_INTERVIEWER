@@ -1,6 +1,6 @@
 streamlit
-openai
-bcrypt
+openai>=1.0.0
+bcrypt==4.0.1
 gtts
 plotly
 pandas
