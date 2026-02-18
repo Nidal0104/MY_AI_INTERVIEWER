@@ -1,0 +1,6 @@
+streamlit
+openai
+bcrypt
+gtts
+plotly
+pandas
