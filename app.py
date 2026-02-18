@@ -1,31 +1,12 @@
 import streamlit as st
 from database import create_tables
 from auth import register_user, login_user
-import time
 
 create_tables()
 
 st.set_page_config(page_title="AI Voice Interview Simulator", layout="wide")
 
-# ---------------- DATA ----------------
-
-COUNTRIES_CITIES = {
-    "Pakistan": ["Karachi","Lahore","Islamabad","Rawalpindi","Faisalabad","Multan","Peshawar","Quetta","Sialkot","Gujranwala","Bahawalpur","Hyderabad","Sukkur","Abbottabad","Mardan"],
-    "India": ["Mumbai","Delhi","Bangalore","Hyderabad","Ahmedabad","Chennai","Kolkata","Pune","Jaipur","Lucknow","Kanpur","Nagpur","Indore","Thane","Bhopal"],
-    "Saudi Arabia": ["Riyadh","Jeddah","Mecca","Medina","Dammam","Khobar","Tabuk","Abha","Hail","Jazan","Al Kharj","Al Qatif","Taif","Najran","Yanbu"],
-    "England": ["London","Manchester","Birmingham","Leeds","Glasgow","Sheffield","Liverpool","Bristol","Newcastle","Leicester","Coventry","Nottingham","Hull","Bradford","Cardiff"]
-}
-
-DEGREES_DISCIPLINES = {
-    "Matric": ["Science","Arts","Commerce"],
-    "Inter": ["Pre-Medical","Pre-Engineering","Commerce","Arts"],
-    "Bachelors": ["Computer Science","Electrical Engineering","Mechanical Engineering","Business Administration","Economics","Physics","Mathematics","Biology","Law","Political Science","Marketing","Finance","Psychology","English","Chemistry"],
-    "Masters": ["Computer Science","Electrical Engineering","Business Administration","Economics","Physics","Mathematics","Biology","Law","Political Science","Marketing","Finance","Psychology","English","Chemistry"],
-    "MPhil": ["Computer Science","Economics","Physics","Mathematics","Biology","Law","Political Science","Business Administration","Psychology","English","Chemistry"],
-    "PhD": ["Computer Science","Economics","Physics","Mathematics","Biology","Law","Political Science","Business Administration","Psychology","English","Chemistry"]
-}
-
-AGES = list(range(15, 66))
+# ------------------ CONSTANT DATA ------------------
 
 JOB_ROLES = [
     "Teacher",
@@ -40,9 +21,9 @@ JOB_ROLES = [
 ]
 
 DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard"]
-TIME_OPTIONS = [1, 2, 3, 5]  # minutes per question
+TIME_OPTIONS = [1, 2, 3, 5]
 
-# ---------------- SESSION INIT ----------------
+# ------------------ SESSION INIT ------------------
 
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -50,17 +31,70 @@ if "user" not in st.session_state:
 if "interview_started" not in st.session_state:
     st.session_state.interview_started = False
 
+# ------------------ TITLE ------------------
+
 st.title("🎯 AI Voice Interview Simulator")
 
-# ---------------- AUTH ----------------
+# =====================================================
+# ================= AUTH SECTION ======================
+# =====================================================
 
-if not st.session_state.user:
+if st.session_state.user is None:
 
-    option = st.sidebar.selectbox("Select", ["Login", "Register"])
+    st.subheader("Login")
 
-    # REGISTER
-    if option == "Register":
-        with st.form("register"):
-            st.subheader("Create a new account")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
 
-            first_name = st.text_input("First Name *")
+    if st.button("Login"):
+        user = login_user(email, password)
+        if user:
+            st.session_state.user = user
+            st.success("Logged in successfully.")
+            st.rerun()
+        else:
+            st.error("Invalid credentials.")
+
+# =====================================================
+# ================= DASHBOARD =========================
+# =====================================================
+
+else:
+
+    st.success(f"Welcome {st.session_state.user['first_name']}")
+
+    if st.button("Logout"):
+        st.session_state.user = None
+        st.session_state.interview_started = False
+        st.rerun()
+
+    st.divider()
+
+    st.subheader("Interview Settings")
+
+    job_role = st.selectbox("Select Job Role", JOB_ROLES)
+    difficulty = st.selectbox("Select Difficulty Level", DIFFICULTY_LEVELS)
+    time_per_question = st.selectbox("Time per Question (minutes)", TIME_OPTIONS)
+
+    st.divider()
+
+    if not st.session_state.interview_started:
+        if st.button("Start Interview"):
+            st.session_state.interview_started = True
+            st.rerun()
+
+    if st.session_state.interview_started:
+        st.success("Interview Started!")
+
+        st.write(f"Role: {job_role}")
+        st.write(f"Difficulty: {difficulty}")
+        st.write(f"Time per question: {time_per_question} minute(s)")
+
+        answer = st.text_area("Your Answer", height=150)
+
+        if st.button("Submit Answer"):
+            st.info("Answer submitted. (Evaluation will be connected here)")
+
+        if st.button("End Interview"):
+            st.session_state.interview_started = False
+            st.rerun()
